@@ -7,11 +7,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        #videoInput {
+            display: none; /* Hide the video element */
+        }
+        #outputCanvas {
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
     <h1>Hand Gesture Recognition</h1>
-    <video id="videoInput" autoplay playsinline style="width: 640px; height: 480px; border: 1px solid black;"></video>
-    <canvas id="outputCanvas" style="width: 640px; height: 480px; border: 1px solid black;"></canvas>
+    <video id="videoInput" autoplay playsinline></video> <!-- Hidden -->
+    <canvas id="outputCanvas" width="640" height="480"></canvas> <!-- Visible -->
     <p id="gestureOutput" style="font-size: 20px; color: green;">Gesture: None</p>
 
     <script>
@@ -26,10 +34,10 @@
         });
 
         hands.setOptions({
-            maxNumHands: 2, // Maximum number of hands to detect
-            minDetectionConfidence: 0.5, // Minimum detection confidence
-            minTrackingConfidence: 0.5,  // Minimum tracking confidence
-            modelComplexity: 1,          // Use full model complexity for accuracy
+            maxNumHands: 2,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+            modelComplexity: 1,
         });
 
         hands.onResults((results) => {
@@ -41,7 +49,7 @@
 
             // Process landmarks if detected
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                results.multiHandLandmarks.forEach((landmarks, handIndex) => {
+                results.multiHandLandmarks.forEach((landmarks) => {
                     // Draw landmarks on canvas
                     drawLandmarks(landmarks);
 
@@ -56,7 +64,7 @@
 
         // Function to draw landmarks
         function drawLandmarks(landmarks) {
-            landmarks.forEach((point, index) => {
+            landmarks.forEach((point) => {
                 const x = point.x * canvas.width;
                 const y = point.y * canvas.height;
 
@@ -77,15 +85,15 @@
             const [thumbMCP, wrist] = [landmarks[2], landmarks[0]];
 
             // Basic gesture classification
-            if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Thumb Up"; // Gesture 5
-            if (thumbTip.y > wrist.y) return "Thumb Down";                         // Gesture 4
-            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up"; // Gesture 3
-            if (indexTip.y > thumbTip.y && pinkyTip.y > wrist.y) return "Closed Fist"; // Gesture 1
-            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory";  // Gesture 6
-            if (thumbTip.y < wrist.y && pinkyTip.y < wrist.y) return "Open Palm";  // Gesture 2
-            if (thumbTip.y < wrist.y && pinkyTip.x < wrist.x) return "Love";       // Gesture 7
+            if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Thumb Up"; 
+            if (thumbTip.y > wrist.y) return "Thumb Down";                         
+            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up";
+            if (indexTip.y > thumbTip.y && pinkyTip.y > wrist.y) return "Closed Fist";
+            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory";  
+            if (thumbTip.y < wrist.y && pinkyTip.y < wrist.y) return "Open Palm";  
+            if (thumbTip.y < wrist.y && pinkyTip.x < wrist.x) return "Love";
 
-            return "Unrecognized Gesture"; // Gesture 0
+            return "Unrecognized Gesture";
         }
 
         // Initialize camera

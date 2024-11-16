@@ -6,24 +6,40 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
 </head>
 <body>
-    <video id="videoInput" autoplay></video>
+    <video id="videoInput" autoplay style="display:none;"></video>
+    <canvas id="outputCanvas"></canvas>
+
     <script>
         const video = document.getElementById('videoInput');
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Adjust canvas size to match video
+        video.addEventListener('loadeddata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+
         const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-        hands.setOptions({maxNumHands: 1});
+        hands.setOptions({maxNumHands: 1, modelComplexity: 1});
         hands.onResults(results => {
-            // Detect gesture and send output to App Inventor
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (results.multiHandLandmarks) {
-                const gesture = 'wave'; // Example gesture
-                window.ReactNativeWebView.postMessage(gesture);
+                for (const landmarks of results.multiHandLandmarks) {
+                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00'});
+                    drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 2});
+                }
             }
         });
 
         navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
             video.srcObject = stream;
             video.play();
-            const camera = new Camera(video, {onFrame: async () => await hands.send({image: video})});
-            camera.start();
+            const onFrame = async () => {
+                await hands.send({image: video});
+                requestAnimationFrame(onFrame);
+            };
+            onFrame();
         });
     </script>
 </body>

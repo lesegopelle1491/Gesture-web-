@@ -6,7 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
 </head>
 <body>
-    <video id="videoInput" autoplay style="display:none;"></video>
+    <video id="videoInput" autoplay style="display: none;"></video>
     <canvas id="outputCanvas"></canvas>
 
     <script>
@@ -14,32 +14,34 @@
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Adjust canvas size to match video
+        // Adjust canvas to match video size
         video.addEventListener('loadeddata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
         });
 
+        // Initialize Mediapipe Hands
         const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
         hands.setOptions({maxNumHands: 1, modelComplexity: 1});
         hands.onResults(results => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
             if (results.multiHandLandmarks) {
                 for (const landmarks of results.multiHandLandmarks) {
-                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00'});
+                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 2});
                 }
             }
         });
 
+        // Access Camera
         navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
             video.srcObject = stream;
             video.play();
-            const onFrame = async () => {
+            const processVideo = async () => {
                 await hands.send({image: video});
-                requestAnimationFrame(onFrame);
+                requestAnimationFrame(processVideo);
             };
-            onFrame();
+            processVideo();
         });
     </script>
 </body>

@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gesture Detection</title>
+    <title>Gesture Recognition</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <style>
-        canvas {
+        video, canvas {
             position: absolute;
-            left: 0;
             top: 0;
+            left: 0;
         }
         video {
-            transform: scaleX(-1); /* Mirror the video for a natural hand view */
+            transform: scaleX(-1); /* Mirror the video for natural hand orientation */
         }
         #gestureText {
             position: absolute;
@@ -34,15 +34,55 @@
         const ctx = canvas.getContext('2d');
         const gestureText = document.getElementById('gestureText');
 
-        // Adjust the canvas size to match the video size
         video.addEventListener('loadeddata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
         });
 
+        const gestures = [
+            { id: 0, label: "Unknown" },
+            { id: 1, label: "Closed_Fist" },
+            { id: 2, label: "Open_Palm" },
+            { id: 3, label: "Pointing_Up" },
+            { id: 4, label: "Thumb_Down" },
+            { id: 5, label: "Thumb_Up" },
+            { id: 6, label: "Victory" },
+            { id: 7, label: "ILoveYou" },
+        ];
+
+        function classifyGesture(landmarks) {
+            // Example gesture detection logic based on landmark positions
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const middleTip = landmarks[12];
+            const ringTip = landmarks[16];
+            const pinkyTip = landmarks[20];
+            const wrist = landmarks[0];
+
+            // Check distances for gestures
+            const isClosedFist = [thumbTip, indexTip, middleTip, ringTip, pinkyTip].every(finger => {
+                const dx = finger.x - wrist.x;
+                const dy = finger.y - wrist.y;
+                return Math.sqrt(dx * dx + dy * dy) < 0.15; // Adjust threshold as needed
+            });
+
+            const isOpenPalm = [thumbTip, indexTip, middleTip, ringTip, pinkyTip].some(finger => {
+                const dx = finger.x - wrist.x;
+                const dy = finger.y - wrist.y;
+                return Math.sqrt(dx * dx + dy * dy) > 0.4; // Adjust threshold as needed
+            });
+
+            if (isClosedFist) return gestures[1];
+            if (isOpenPalm) return gestures[2];
+
+            // Add other gesture conditions here, e.g., "Thumbs Up," "Victory," etc.
+            return gestures[0]; // Default to "Unknown"
+        }
+
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
+
         hands.setOptions({
             maxNumHands: 1,
             modelComplexity: 1,
@@ -51,42 +91,26 @@
         });
 
         hands.onResults(results => {
-            // Clear the canvas before drawing
-            ctx.save(); // Save the context state
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Flip the canvas horizontally to match the mirrored video feed
+            ctx.save();
             ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
+            ctx.scale(-1, 1); // Flip the canvas for mirrored video
 
             if (results.multiHandLandmarks) {
                 for (const landmarks of results.multiHandLandmarks) {
                     drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 2});
 
-                    // Example gesture detection logic (Fist Detection)
-                    const isFist = landmarks.every((landmark, index) => {
-                        if ([4, 8, 12, 16, 20].includes(index)) { // Fingertips
-                            const dx = landmark.x - landmarks[0].x; // X-distance from wrist
-                            const dy = landmark.y - landmarks[0].y; // Y-distance from wrist
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            return distance < 0.1; // Threshold for "fist"
-                        }
-                        return true;
-                    });
-
-                    // Update gesture text
-                    if (isFist) {
-                        gestureText.textContent = "Fist Detected";
-                    } else {
-                        gestureText.textContent = "Hand Detected";
-                    }
+                    // Classify and display the gesture
+                    const gesture = classifyGesture(landmarks);
+                    gestureText.textContent = `${gesture.id} - ${gesture.label}`;
                 }
             } else {
-                gestureText.textContent = "No Gesture Detected";
+                gestureText.textContent = "No Hand Detected";
             }
 
-            ctx.restore(); // Restore the context to the default state
+            ctx.restore();
         });
 
         const camera = new Camera(video, {

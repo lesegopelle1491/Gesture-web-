@@ -1,124 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Gesture Recognition</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-    <style>
-        video, canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        video {
-            transform: scaleX(-1); /* Mirror the video for natural hand orientation */
-        }
-        #gestureText {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 24px;
-            color: #FF0000;
-        }
-    </style>
 </head>
 <body>
-    <video id="videoInput" autoplay></video>
-    <canvas id="outputCanvas"></canvas>
-    <div id="gestureText">Loading...</div>
+    <h1>Hand Gesture Detection</h1>
+    <video id="videoInput" autoplay style="width: 640px; height: 480px;"></video>
+    <p id="gestureOutput" style="font-size: 20px; color: blue;">Gesture: None</p>
 
     <script>
         const video = document.getElementById('videoInput');
-        const canvas = document.getElementById('outputCanvas');
-        const ctx = canvas.getContext('2d');
-        const gestureText = document.getElementById('gestureText');
-
-        video.addEventListener('loadeddata', () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-        });
-
-        const gestures = [
-            { id: 0, label: "Unknown" },
-            { id: 1, label: "Closed_Fist" },
-            { id: 2, label: "Open_Palm" },
-            { id: 3, label: "Pointing_Up" },
-            { id: 4, label: "Thumb_Down" },
-            { id: 5, label: "Thumb_Up" },
-            { id: 6, label: "Victory" },
-            { id: 7, label: "ILoveYou" },
-        ];
-
-        function classifyGesture(landmarks) {
-            // Example gesture detection logic based on landmark positions
-            const thumbTip = landmarks[4];
-            const indexTip = landmarks[8];
-            const middleTip = landmarks[12];
-            const ringTip = landmarks[16];
-            const pinkyTip = landmarks[20];
-            const wrist = landmarks[0];
-
-            // Check distances for gestures
-            const isClosedFist = [thumbTip, indexTip, middleTip, ringTip, pinkyTip].every(finger => {
-                const dx = finger.x - wrist.x;
-                const dy = finger.y - wrist.y;
-                return Math.sqrt(dx * dx + dy * dy) < 0.15; // Adjust threshold as needed
-            });
-
-            const isOpenPalm = [thumbTip, indexTip, middleTip, ringTip, pinkyTip].some(finger => {
-                const dx = finger.x - wrist.x;
-                const dy = finger.y - wrist.y;
-                return Math.sqrt(dx * dx + dy * dy) > 0.4; // Adjust threshold as needed
-            });
-
-            if (isClosedFist) return gestures[1];
-            if (isOpenPalm) return gestures[2];
-
-            // Add other gesture conditions here, e.g., "Thumbs Up," "Victory," etc.
-            return gestures[0]; // Default to "Unknown"
-        }
+        const gestureOutput = document.getElementById('gestureOutput');
 
         const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
         });
 
         hands.setOptions({
             maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
+            minDetectionConfidence: 0.99, // Minimum detection confidence
+            minTrackingConfidence: 0.5,  // Adjusted for tracking confidence
+            minPresenceConfidence: 0.5   // Adjusted for hand presence confidence
         });
 
-        hands.onResults(results => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hands.onResults((results) => {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const handLandmarks = results.multiHandLandmarks[0];
 
-            ctx.save();
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1); // Flip the canvas for mirrored video
-
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
-                    drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 2});
-
-                    // Classify and display the gesture
-                    const gesture = classifyGesture(landmarks);
-                    gestureText.textContent = `${gesture.id} - ${gesture.label}`;
-                }
+                // Detect gesture
+                const gesture = detectGesture(handLandmarks);
+                gestureOutput.textContent = `Gesture: ${gesture}`;
             } else {
-                gestureText.textContent = "No Hand Detected";
+                gestureOutput.textContent = "Gesture: None";
             }
-
-            ctx.restore();
         });
+
+        // Function to classify gestures based on landmarks
+        function detectGesture(landmarks) {
+            const [thumbTip, indexTip, middleTip, ringTip, pinkyTip] = [
+                landmarks[4], landmarks[8], landmarks[12], landmarks[16], landmarks[20]
+            ];
+
+            const [thumbMCP, indexMCP, wrist] = [
+                landmarks[2], landmarks[5], landmarks[0]
+            ];
+
+            // Gesture classification logic
+            if (thumbTip.y < indexTip.y && thumbTip.y < middleTip.y) return "Thumb Up"; // Gesture 5
+            if (thumbTip.y > wrist.y && thumbTip.y < indexMCP.y) return "Thumb Down";   // Gesture 4
+            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up"; // Gesture 3
+            if (indexTip.y > thumbTip.y && middleTip.y > indexTip.y) return "Closed Fist"; // Gesture 1
+            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory"; // Gesture 6
+            if (indexTip.x > thumbTip.x && pinkyTip.x > wrist.x) return "Open Palm"; // Gesture 2
+            if (thumbTip.y < wrist.y && pinkyTip.x < indexMCP.x) return "Love";     // Gesture 7
+
+            return "Unrecognized Gesture"; // Gesture 0
+        }
 
         const camera = new Camera(video, {
             onFrame: async () => {
                 await hands.send({image: video});
             },
-            width: 1280,
-            height: 720
+            width: 640,
+            height: 480,
         });
         camera.start();
     </script>

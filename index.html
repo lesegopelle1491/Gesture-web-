@@ -4,45 +4,91 @@
     <title>Gesture Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        video {
+            transform: scaleX(-1); /* Mirror the video for a natural hand view */
+        }
+        #gestureText {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #FF0000;
+        }
+    </style>
 </head>
 <body>
-    <video id="videoInput" autoplay style="display: none;"></video>
+    <video id="videoInput" autoplay></video>
     <canvas id="outputCanvas"></canvas>
+    <div id="gestureText">Loading...</div>
 
     <script>
         const video = document.getElementById('videoInput');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d');
+        const gestureText = document.getElementById('gestureText');
 
-        // Adjust canvas to match video size
+        // Set up the canvas size to match the video size
         video.addEventListener('loadeddata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
         });
 
-        // Initialize Mediapipe Hands
-        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-        hands.setOptions({maxNumHands: 1, modelComplexity: 1});
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
         hands.onResults(results => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frames
+
             if (results.multiHandLandmarks) {
                 for (const landmarks of results.multiHandLandmarks) {
                     drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 2});
+
+                    // Fist Detection Logic
+                    const isFist = landmarks.every((landmark, index) => {
+                        if ([4, 8, 12, 16, 20].includes(index)) { // Fingertips
+                            const dx = landmark.x - landmarks[0].x; // X-distance from wrist
+                            const dy = landmark.y - landmarks[0].y; // Y-distance from wrist
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            return distance < 0.1; // Threshold for "fist"
+                        }
+                        return true;
+                    });
+
+                    // Update gesture text
+                    if (isFist) {
+                        gestureText.textContent = "Fist Detected";
+                    } else {
+                        gestureText.textContent = "Hand Detected";
+                    }
                 }
+            } else {
+                gestureText.textContent = "No Gesture Detected";
             }
         });
 
-        // Access Camera
-        navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
-            video.srcObject = stream;
-            video.play();
-            const processVideo = async () => {
+        const camera = new Camera(video, {
+            onFrame: async () => {
                 await hands.send({image: video});
-                requestAnimationFrame(processVideo);
-            };
-            processVideo();
+            },
+            width: 1280,
+            height: 720
         });
+        camera.start();
     </script>
 </body>
 </html>

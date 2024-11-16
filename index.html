@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gesture Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+</head>
+<body>
+    <video id="videoInput" autoplay></video>
+    <script>
+        const video = document.getElementById('videoInput');
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({maxNumHands: 1});
+        hands.onResults(results => {
+            // Detect gesture and send output to App Inventor
+            if (results.multiHandLandmarks) {
+                const gesture = 'wave'; // Example gesture
+                window.ReactNativeWebView.postMessage(gesture);
+            }
+        });
+
+        navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
+            video.srcObject = stream;
+            video.play();
+            const camera = new Camera(video, {onFrame: async () => await hands.send({image: video})});
+            camera.start();
+        });
+    </script>
+</body>
+</html>

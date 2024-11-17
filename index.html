@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hand Gesture Detection</title>
+    <title>Hand Gesture Detection with ESP32</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
@@ -28,19 +28,16 @@
         const ctx = canvas.getContext('2d');
         const gestureOutput = document.getElementById('gestureOutput');
 
-        // ESP32 IP Address
-        const ESP32_IP = "http://192.168.8.114";
-
         // Initialize MediaPipe Hands
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
         });
 
         hands.setOptions({
-            maxNumHands: 2,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-            modelComplexity: 1,
+            maxNumHands: 2,                     // Max number of hands to detect
+            minDetectionConfidence: 0.5,       // Minimum confidence for detection
+            minTrackingConfidence: 0.5,        // Minimum confidence for tracking
+            modelComplexity: 1,                // Complexity of the model
         });
 
         hands.onResults((results) => {
@@ -60,11 +57,11 @@
                     const gesture = detectGesture(landmarks);
                     gestureOutput.textContent = `Gesture: ${gesture}`;
 
-                    // Send HTTP request based on gesture
+                    // Send HTTP request to ESP32 based on gesture
                     if (gesture === "Pointing Up") {
-                        sendHTTPRequest(`${ESP32_IP}/H`);
+                        sendHttpRequest("http://192.168.8.114/H");
                     } else if (gesture === "Thumb Down") {
-                        sendHTTPRequest(`${ESP32_IP}/L`);
+                        sendHttpRequest("http://192.168.8.114/L");
                     }
                 });
             } else {
@@ -95,23 +92,29 @@
             const [thumbMCP, wrist] = [landmarks[2], landmarks[0]];
 
             // Basic gesture classification
-            if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Pointing Up"; 
-            if (thumbTip.y > wrist.y) return "Thumb Down";                         
+            if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Pointing Up"; // Gesture 1
+            if (thumbTip.y > wrist.y) return "Thumb Down";                             // Gesture 2
+            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up";
+            if (indexTip.y > thumbTip.y && pinkyTip.y > wrist.y) return "Closed Fist";
+            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory";  
+            if (thumbTip.y < wrist.y && pinkyTip.y < wrist.y) return "Open Palm";  
 
             return "Unrecognized Gesture";
         }
 
-        // Function to send HTTP requests
-        function sendHTTPRequest(url) {
+        // Function to send HTTP requests to ESP32
+        function sendHttpRequest(url) {
             fetch(url)
                 .then((response) => {
                     if (response.ok) {
-                        console.log("Request successful:", url);
+                        console.log("ESP32 response:", response.status);
                     } else {
-                        console.error("Request failed:", response.status);
+                        console.error("ESP32 HTTP error:", response.status);
                     }
                 })
-                .catch((error) => console.error("Error sending request:", error));
+                .catch((error) => {
+                    console.error("Failed to send HTTP request:", error);
+                });
         }
 
         // Initialize camera
@@ -126,4 +129,3 @@
     </script>
 </body>
 </html>
-

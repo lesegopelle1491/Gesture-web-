@@ -14,6 +14,10 @@
         #outputCanvas {
             border: 1px solid black;
         }
+        #gestureOutput {
+            font-size: 20px;
+            color: yellow; /* Set the text color to yellow */
+        }
     </style>
 </head>
 <body>
@@ -56,24 +60,19 @@
                     // Detect and classify gesture
                     const gesture = detectGesture(landmarks);
 
-                    // Change text color based on gesture and send HTTP request
+                    // Update gesture output text and send HTTP request
+                    gestureOutput.textContent = `Gesture: ${gesture}`;
+                    gestureOutput.style.color = "yellow"; // Change text color to yellow
+
                     if (gesture === "Pointing Up") {
-                        gestureOutput.textContent = `Gesture: ${gesture}`;
-                        gestureOutput.style.color = "yellow"; // Change text to green
                         sendHttpRequest("http://192.168.8.114/H");
                     } else if (gesture === "Thumb Down") {
-                        gestureOutput.textContent = `Gesture: ${gesture}`;
-                        gestureOutput.style.color = "red"; // Change text to red
                         sendHttpRequest("http://192.168.8.114/L");
                     } else {
-                        gestureOutput.textContent = `Gesture: ${gesture}`;
-                        gestureOutput.style.color = "black"; // Default text color
+                        // Handle other gestures or leave it unchanged
                     }
                 });
-            } else {
-                gestureOutput.textContent = "Gesture: None";
-                gestureOutput.style.color = "black"; // Default text color
-            }
+            } 
         });
 
         // Function to draw landmarks

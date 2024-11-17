@@ -1,110 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hand Gesture Detection</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-    <style>
-        #videoInput {
-            display: none; /* Hide the video element */
-        }
-        #outputCanvas {
-            border: 1px solid black;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gesture Control</title>
 </head>
 <body>
-    <h1>Hand Gesture Recognition</h1>
-    <video id="videoInput" autoplay playsinline></video> <!-- Hidden -->
-    <canvas id="outputCanvas" width="640" height="480"></canvas> <!-- Visible -->
-    <p id="gestureOutput" style="font-size: 20px; color: green;">Gesture: None</p>
+  <h1>Gesture Control for ESP32</h1>
+  <button onclick="sendGesture('Thumbs Up')">Send 'Thumbs Up'</button>
+  <button onclick="sendGesture('Victory')">Send 'Victory'</button>
+  <button onclick="sendGesture('None')">Send 'None'</button>
 
-    <script>
-        const video = document.getElementById('videoInput');
-        const canvas = document.getElementById('outputCanvas');
-        const ctx = canvas.getContext('2d');
-        const gestureOutput = document.getElementById('gestureOutput');
+  <script>
+    const ESP32_IP = "192.168.8.114"; // Replace with your ESP32's IP address
 
-        // Initialize MediaPipe Hands
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    function sendGesture(gesture) {
+      fetch(`http://${ESP32_IP}/gesture`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `gesture=${gesture}`,
+      })
+        .then((response) => response.text())
+        .then((data) => {
+          console.log("Response:", data);
+        })
+        .catch((error) => {
+          console.error("Error:", error);
         });
-
-        hands.setOptions({
-            maxNumHands: 2,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-            modelComplexity: 1,
-        });
-
-        hands.onResults((results) => {
-            // Clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw the input video to the canvas
-            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-            // Process landmarks if detected
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                results.multiHandLandmarks.forEach((landmarks) => {
-                    // Draw landmarks on canvas
-                    drawLandmarks(landmarks);
-
-                    // Detect and classify gesture
-                    const gesture = detectGesture(landmarks);
-                    gestureOutput.textContent = `Gesture: ${gesture}`;
-                });
-            } else {
-                gestureOutput.textContent = "Gesture: None";
-            }
-        });
-
-        // Function to draw landmarks
-        function drawLandmarks(landmarks) {
-            landmarks.forEach((point) => {
-                const x = point.x * canvas.width;
-                const y = point.y * canvas.height;
-
-                ctx.beginPath();
-                ctx.arc(x, y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = "red";
-                ctx.fill();
-                ctx.closePath();
-            });
-        }
-
-        // Function to detect and classify gestures
-        function detectGesture(landmarks) {
-            const [thumbTip, indexTip, middleTip, ringTip, pinkyTip] = [
-                landmarks[4], landmarks[8], landmarks[12], landmarks[16], landmarks[20],
-            ];
-
-            const [thumbMCP, wrist] = [landmarks[2], landmarks[0]];
-
-            // Basic gesture classification
-            if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Thumb Up"; 
-            if (thumbTip.y > wrist.y) return "Thumb Down";                         
-            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up";
-            if (indexTip.y > thumbTip.y && pinkyTip.y > wrist.y) return "Closed Fist";
-            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory";  
-            if (thumbTip.y < wrist.y && pinkyTip.y < wrist.y) return "Open Palm";  
-            if (thumbTip.y < wrist.y && pinkyTip.x < wrist.x) return "Love";
-
-            return "Unrecognized Gesture";
-        }
-
-        // Initialize camera
-        const camera = new Camera(video, {
-            onFrame: async () => {
-                await hands.send({image: video});
-            },
-            width: 640,
-            height: 480,
-        });
-        camera.start();
-    </script>
+    }
+  </script>
 </body>
 </html>

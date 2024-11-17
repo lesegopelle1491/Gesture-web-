@@ -20,7 +20,7 @@
     <h1>Hand Gesture Recognition</h1>
     <video id="videoInput" autoplay playsinline></video> <!-- Hidden -->
     <canvas id="outputCanvas" width="640" height="480"></canvas> <!-- Visible -->
-    <p id="gestureOutput" style="font-size: 20px; color: green;">Gesture: None</p>
+    <p id="gestureOutput" style="font-size: 20px;">Gesture: None</p>
 
     <script>
         const video = document.getElementById('videoInput');
@@ -55,17 +55,24 @@
 
                     // Detect and classify gesture
                     const gesture = detectGesture(landmarks);
-                    gestureOutput.textContent = `Gesture: ${gesture}`;
 
-                    // Send HTTP request to ESP32 based on gesture
+                    // Change text color based on gesture and send HTTP request
                     if (gesture === "Pointing Up") {
+                        gestureOutput.textContent = `Gesture: ${gesture}`;
+                        gestureOutput.style.color = "yellow"; // Change text to green
                         sendHttpRequest("http://192.168.8.114/H");
                     } else if (gesture === "Thumb Down") {
+                        gestureOutput.textContent = `Gesture: ${gesture}`;
+                        gestureOutput.style.color = "red"; // Change text to red
                         sendHttpRequest("http://192.168.8.114/L");
+                    } else {
+                        gestureOutput.textContent = `Gesture: ${gesture}`;
+                        gestureOutput.style.color = "black"; // Default text color
                     }
                 });
             } else {
                 gestureOutput.textContent = "Gesture: None";
+                gestureOutput.style.color = "black"; // Default text color
             }
         });
 
@@ -94,11 +101,6 @@
             // Basic gesture classification
             if (thumbTip.y < indexTip.y && middleTip.y > wrist.y) return "Pointing Up"; // Gesture 1
             if (thumbTip.y > wrist.y) return "Thumb Down";                             // Gesture 2
-            if (indexTip.y < thumbTip.y && middleTip.y > indexTip.y) return "Pointing Up";
-            if (indexTip.y > thumbTip.y && pinkyTip.y > wrist.y) return "Closed Fist";
-            if (thumbTip.x > pinkyTip.x && indexTip.y < wrist.y) return "Victory";  
-            if (thumbTip.y < wrist.y && pinkyTip.y < wrist.y) return "Open Palm";  
-
             return "Unrecognized Gesture";
         }
 

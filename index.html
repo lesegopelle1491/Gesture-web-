@@ -16,7 +16,7 @@
         }
         #gestureOutput {
             font-size: 20px;
-            color: black; /* Set the text color to yellow */
+            color: black; /* Set the text color to black */
         }
     </style>
 </head>
@@ -62,7 +62,7 @@
 
                     // Update gesture output text and send HTTP request
                     gestureOutput.textContent = `Gesture: ${gesture}`;
-                    gestureOutput.style.color = "yellow"; // Change text color to yellow
+                    gestureOutput.style.color = "black"; // Set the color explicitly to black
 
                     if (gesture === "Pointing Up") {
                         sendHttpRequest("http://192.168.8.114/H");

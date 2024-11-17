@@ -14,10 +14,6 @@
         #outputCanvas {
             border: 1px solid black;
         }
-        #gestureOutput {
-            font-size: 20px;
-            color: black; /* Set the text color to black */
-        }
     </style>
 </head>
 <body>
@@ -60,19 +56,24 @@
                     // Detect and classify gesture
                     const gesture = detectGesture(landmarks);
 
-                    // Update gesture output text and send HTTP request
+                    // Update gesture output
                     gestureOutput.textContent = `Gesture: ${gesture}`;
-                    gestureOutput.style.color = "black"; // Set the color explicitly to black
 
+                    // Change text color based on gesture and send HTTP request
                     if (gesture === "Pointing Up") {
+                        gestureOutput.style.color = "green";
                         sendHttpRequest("http://192.168.8.114/H");
                     } else if (gesture === "Thumb Down") {
+                        gestureOutput.style.color = "red";
                         sendHttpRequest("http://192.168.8.114/L");
                     } else {
-                        // Handle other gestures or leave it unchanged
+                        gestureOutput.style.color = "black";
                     }
                 });
-            } 
+            } else {
+                gestureOutput.textContent = "Gesture: None";
+                gestureOutput.style.color = "black";
+            }
         });
 
         // Function to draw landmarks
@@ -126,7 +127,10 @@
             width: 640,
             height: 480,
         });
-        camera.start();
+
+        camera.start().catch((error) => {
+            console.error("Camera initialization failed:", error);
+        });
     </script>
 </body>
 </html>
